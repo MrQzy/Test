@@ -1,0 +1,342 @@
+package com.westware.bkxy.sms.utils;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+public class JSONConvertor {
+	
+//	private static final Logger logger = Logger.getLogger(JSONConvertor.class);
+	
+	public static String list2JSON(Collection<Object> objects) {
+		StringBuilder sb = new StringBuilder("{Rows:[");
+		if (objects != null && !objects.isEmpty()) {
+			for (Object object : objects) {
+				if (object.toString() != null && object.toString() != "")
+					sb.append(object.toString()).append(",");
+			}
+		}
+		if (sb.toString().contains(","))
+			sb.deleteCharAt(sb.length() - 1);
+		sb.append("],Total:" + objects.size() + "}");
+		return sb.toString();
+	}
+
+	public static String list2JSON(Collection<Object> objects, Object totalCount) {
+		StringBuilder sb = new StringBuilder("{Rows:[");
+		if (objects != null && !objects.isEmpty()) {
+			for (Object object : objects) {
+				if (object.toString() != null && object.toString() != "")
+					sb.append(object.toString()).append(",");
+			}
+		}
+		if (sb.toString().contains(","))
+			sb.deleteCharAt(sb.length() - 1);
+		sb.append("],Total:" + totalCount + "}");
+		return sb.toString();
+	}
+
+	public static String list2JSON(Object object) {
+		List<Object> list = new ArrayList<Object>();
+		list.add(object);
+		return list2JSON(list);
+	}
+
+	public static String list2JSONArray(Object[] objects) {
+		StringBuilder sb = new StringBuilder("[");
+		for (Object object : objects) {
+			sb.append(object.toString()).append(",");
+		}
+		sb.append("]");
+		return sb.toString();
+	}
+	
+//	public static JSONArray rebuildJSONArray11(JSONArray jsonArray){
+//		System.out.println("-----jsonArray-"+jsonArray);
+//		JSONArray newArray = new JSONArray();
+//		if(!jsonArray.isEmpty()){
+//			Map<String, String> channelMap = MysqlUtil.getMapBySQL("select channel_id,name from channel where status = 1 group by name");
+//			JSONObject newJson = new JSONObject();
+//			newJson.put("count", 0);
+//			newJson.put("order_count", 0);
+//			newJson.put("channel_name", "通用-盒子");
+//			newJson.put("channel_id", "1999");
+//			newJson.put("app_version", "");
+//			newJson.put("day_time", "");
+//			for (int i = 0; i < jsonArray.size(); i++) {
+////				if(i==0){
+////					newArray.add(jsonArray.get(i));
+////				}else{
+////					for(int j=0;j<newArray.size();j++){
+////						JSONObject newJsonJ = newArray.getJSONObject(j);
+//						JSONObject json = jsonArray.getJSONObject(i);
+//						String channelId = json.getString("channel_id");
+//						double countPrice = ObjectUtil.toDouble(json.getString("count").replaceAll("元", ""));
+//						String dayTime = json.getString("day_time");
+////						String dayTimeJ = newJsonJ.getString("day_time");
+//						
+////					if(dayTime.equals(dayTimeJ)){
+//						if(!channelMap.containsKey(channelId) || "1999".equals(channelId)){
+//							double newCountPrice = newJson.getInt("count")+countPrice;
+////							newArray.remove(j);
+//							if(json.containsKey("order_count")){
+//								int orderCount = json.getInt("order_count");
+//								int newOrderCount = newJson.getInt("order_count")+orderCount;
+//								newJson.put("order_count", newOrderCount);
+//							}
+//							if(json.containsKey("order_type")){
+//								int orderType = json.getInt("order_type");
+//								newJson.put("order_type", orderType);
+//							}
+//							newJson.put("count", newCountPrice);
+//							newJson.put("day_time", dayTime);
+//							if(newJson.getInt("count") != 0 ){
+//								newArray.add(newJson);
+//							}
+//						}else{
+//							newArray.add(json);
+//						}
+////					}
+////					}
+////				}
+//
+//			}
+//			
+//		}
+////		System.out.println("--------"+newArray);
+//		return newArray;
+//	} 
+	
+	public static JSONArray rebuildJSONArray(JSONArray array, String channelId, String appVersion) {
+		return rebuildJSONArray(array, channelId, appVersion, "");
+	}
+
+	public static JSONArray rebuildJSONArray(JSONArray array, String channelId, String appVersion, String orderType) {
+		if(ObjectUtil.isEmpty(channelId)) {
+			return array;
+		}
+		Map<String, String> channelMap = MysqlUtil.getMapBySQL("select channel_id,name from channel where status = 1");
+		Set<String> channelSet = channelMap.keySet();
+//		logger.error("===old===" + array);
+		Set<JSONObject> deleteObjSet = new HashSet<JSONObject>();
+		Map<String, JSONObject> commonDataMap = new TreeMap<String, JSONObject>();
+		String splitChar = "#";
+		for(int index = 0; index < array.size(); index++) {
+			JSONObject tempObj = array.getJSONObject(index);
+			String tempChannelId = tempObj.getString("channel_id") + "";
+			if(tempChannelId.length() > 3 && (channelSet.contains(tempChannelId) && !tempChannelId.startsWith("1999"))) {
+				continue;
+			}
+			deleteObjSet.add(tempObj);
+			double tempCount = tempObj.getDouble("count");
+			double tempOrderCount = tempObj.containsKey("order_count") ? tempObj.getDouble("order_count") : 0;
+			String tempKey = "day_time=" + tempObj.get("day_time") + splitChar;
+			if(!ObjectUtil.isEmpty(appVersion)) {
+				tempKey += "app_version=" + tempObj.get("app_version") + splitChar;
+			}
+			if(!ObjectUtil.isEmpty(orderType)) {
+				tempKey += "order_type=" + tempObj.get("order_type") + splitChar;
+			}
+			else {
+				tempKey += "order_type=0" + splitChar;
+			}
+//			for(Object key : tempObj.keySet()) {
+//				if("count".equals(key) || "order_count".equals(key) || "channel_id".equals(key)
+//						|| "channel_name".equals(key) || "day_time".equals(key) || "app_version".equals(key)) {
+//					continue;
+//				}
+//				tempKey += key + "=" + tempObj.get(key) + splitChar;
+//			}
+			JSONObject tempCommonObj = commonDataMap.get(tempKey);
+			if(tempCommonObj == null) {
+				tempCommonObj = new JSONObject();
+				tempCommonObj.put("count", tempCount);
+				tempCommonObj.put("order_count", tempOrderCount);
+			}
+			else {
+				tempCount += tempCommonObj.getDouble("count");
+				tempOrderCount += tempCommonObj.getDouble("order_count");
+				tempCommonObj.put("count", tempCount);
+				tempCommonObj.put("order_count", tempOrderCount);
+			}
+//			System.out.println(".......tempKey...." + tempKey);
+//			System.out.println(".......tempObj...." + tempObj);
+//			System.out.println(".......tempCommonObj...." + tempCommonObj);
+			commonDataMap.put(tempKey, tempCommonObj);
+		}
+		for(JSONObject tempObj : deleteObjSet) {
+			array.remove(tempObj);
+		}
+		for(String key : commonDataMap.keySet()) {
+			JSONObject tempObj = commonDataMap.get(key);
+			String keyArr[] = key.split(splitChar);
+			for(String tempKey : keyArr) {
+				if(tempKey.contains("=")) {
+					String keyValueArr[] = tempKey.split("=");
+					String tempValue = "";
+					// 防止值为空
+					if(keyValueArr.length > 1) {
+						tempValue = keyValueArr[1];
+					}
+					tempObj.put(keyValueArr[0], tempValue);
+				}
+			}
+			tempObj.put("channel_id", "1999");
+			tempObj.put("channel_name", "通用-盒子");
+			array.add(tempObj);
+		}
+//		logger.error("===new===" + array);
+//		Map<String, String> channelMap = MysqlUtil.getMapBySQL("select channel_id,name from channel where status = 1");
+//		JSONArray arrayTemp = new JSONArray();
+//		int num = 0;
+//		Set<Integer> delSet = new HashSet<Integer>();
+//		for (int i = 0; i < array.size(); i++) {
+//			JSONObject newJsonObjectI = (JSONObject) array.get(i);
+//			if (num == 0) {
+//				arrayTemp.add(array.get(i));
+//			} else {
+//				int numJ = 0;
+//				for (int j = 0; j < arrayTemp.size(); j++) {
+//					JSONObject newJsonObjectJ = (JSONObject) arrayTemp.get(j);
+//					String channelIdI = newJsonObjectI.getString("channel_id");
+//					String keyValueI = newJsonObjectI.getString("day_time");
+//					double newCountPriceI = newJsonObjectI.getInt("count");
+//
+//					String channelIdJ = newJsonObjectJ.getString("channel_id");
+//					String keyValueJ = newJsonObjectJ.getString("day_time");
+//					double newCountPriceJ = newJsonObjectJ.getInt("count");					
+//					if (keyValueI.equals(keyValueJ)) {
+//						if((!channelMap.containsKey(channelIdI) || "1999".equals(channelIdI)) && channelIdI.equals(channelIdJ)){
+//							double newValue = newCountPriceI + newCountPriceJ;
+////							arrayTemp.remove(j);
+//							JSONObject newObject = new JSONObject();
+//							newObject.put("channel_name", "通用-盒子");
+//							newObject.put("channel_id", "1999");
+//							newObject.put("app_version", newJsonObjectI.getString("app_version"));
+//							newObject.put("day_time", newJsonObjectI.getString("day_time"));
+//							if(newJsonObjectI.containsKey("order_count")){
+//								int orderCount = newJsonObjectI.getInt("order_count");
+//								int newOrderCount = newJsonObjectJ.getInt("order_count")+orderCount;
+//								newObject.put("order_count", newOrderCount);
+//							}
+//							if(newJsonObjectI.containsKey("order_type")){
+//								int orderType = newJsonObjectI.getInt("order_type");
+//								newObject.put("order_type", orderType);
+//							}
+//							newObject.put("count", newValue);
+//							arrayTemp.add(newObject);
+////							break;
+//						}else{
+//							System.out.println("-----newJsonObjectI-----"+newJsonObjectI);
+////							System.out.println("-----newJsonObjectJ-----"+newJsonObjectJ);
+//						}
+//					}
+//					numJ++;
+//				}
+////				System.out.println("----numJ----"+numJ+"------size--"+arrayTemp.size());
+////				for (Integer index: delSet) {
+////					arrayTemp.remove(index);
+////				}
+//				if (numJ - 1 == arrayTemp.size() - 1) {
+//					arrayTemp.add(newJsonObjectI);
+//				}
+//			}
+//
+//			num++;
+//		}
+		return array;
+	}
+	
+//	public static JSONArray rebuildJSONArray22(JSONArray array) {
+//		Map<String, String> channelMap = MysqlUtil.getMapBySQL("select channel_id,name from channel where status = 1");
+//		Map<String, JSONObject> map = new HashMap<String, JSONObject>();
+//		Set<String> delSet = new HashSet<String>();
+//		JSONArray arrayTemp = new JSONArray();
+//		for (int i = 0; i < array.size(); i++) {
+//			JSONObject json = array.getJSONObject(i);
+//			String keyValue = json.getString("day_time");
+//			String appVersion = json.getString("app_version");
+//			if(!ObjectUtil.isEmpty(appVersion)){
+//				keyValue += appVersion;
+//			}
+//			String channelId = json.getString("channel_id");
+//			if(!ObjectUtil.isEmpty(channelId)){
+//				keyValue += channelId;
+//			}
+//			String newKeyValue = json.getString("day_time")+appVersion+"1999";
+//			if(!map.containsKey(keyValue)){
+//				map.put(keyValue, json);
+//			}
+//			if(!map.containsKey(newKeyValue)){
+//				map.put(newKeyValue, new JSONObject());
+//			}
+//			if((!channelMap.containsKey(channelId) ) && array.size()>1){
+//				if(!keyValue.equals(newKeyValue)){
+//					delSet.add(keyValue);
+//				}
+//				JSONObject obj = map.get(newKeyValue);
+//				double newValue = json.getDouble("count");
+//				if(!obj.isEmpty()){
+//					newValue += obj.getDouble("count");;
+//				}
+//				JSONObject newObject = new JSONObject();
+//				newObject.put("channel_name", "通用-盒子");
+//				newObject.put("channel_id", "1999");
+//				newObject.put("app_version", json.getString("app_version"));
+//				newObject.put("day_time", json.getString("day_time"));
+//				if(json.containsKey("order_count")){
+//					int newOrderCount = json.getInt("order_count");
+//					if(!obj.isEmpty()){
+//						int orderCount = ObjectUtil.toInteger(obj.getInt("order_count"));
+//						newOrderCount += orderCount;
+//					}
+//					newObject.put("order_count", newOrderCount);
+//				}
+//				if(json.containsKey("order_type")){
+//					int orderType = json.getInt("order_type");
+//					newObject.put("order_type", orderType);
+//				}
+//				newObject.put("count", newValue);
+//				map.put(newKeyValue, newObject);
+//			}
+//		}
+//		for (String index: delSet) {
+//			map.remove(index);
+//		}
+//		for (String key : map.keySet()) {
+//			JSONObject mapJson = map.get(key);
+//			if(!mapJson.isEmpty()){
+//				arrayTemp.add(mapJson);
+//			}
+//		}
+//		TreeMap<Integer, JSONObject> tMap = new TreeMap<Integer, JSONObject>();
+//		for (int i = 0; i < arrayTemp.size(); i++) {
+//			JSONObject json = arrayTemp.getJSONObject(i);
+//			int count = json.getInt("day_time")+i;
+//			tMap.put(count, json);
+//		}
+////		System.out.println("-----------tMap---"+tMap);
+////		System.out.println("-----------111---"+arrayTemp);
+//		arrayTemp.clear();
+//		for (int count : tMap.keySet()) {
+//			arrayTemp.add(tMap.get(count));
+//		}
+////		System.out.println("-----------222---"+arrayTemp);
+//		return arrayTemp;
+//	}
+	
+	public static void main(String[] args) {
+		String old = "[{\"count\":\"7104.0\",\"order_count\":\"325\",\"channel_name\":\"阿里-盒子\",\"channel_id\":\"1001\",\"order_type\":\"3\",\"app_version\":\"V3.120\",\"day_time\":\"201702\"},{\"count\":\"1832.0\",\"order_count\":\"141\",\"channel_name\":\"康佳-TV\",\"channel_id\":\"1002\",\"order_type\":\"0\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"9.0\",\"order_count\":\"1\",\"channel_name\":\"创维-盒子\",\"channel_id\":\"1003\",\"order_type\":\"1\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"2050.0\",\"order_count\":\"58\",\"channel_name\":\"乐视-盒子\",\"channel_id\":\"1005\",\"order_type\":\"1\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"695.0\",\"order_count\":\"30\",\"channel_name\":\"华为-盒子\",\"channel_id\":\"1006\",\"order_type\":\"0\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"3185.0\",\"order_count\":\"202\",\"channel_name\":\"酷开电视-TV\",\"channel_id\":\"1007\",\"order_type\":\"4\",\"app_version\":\"V3.100\",\"day_time\":\"201702\"},{\"count\":\"1400.0\",\"order_count\":\"84\",\"channel_name\":\"欢网-TV\",\"channel_id\":\"1009\",\"order_type\":\"0\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"144.0\",\"order_count\":\"7\",\"channel_name\":\"海信-TV\",\"channel_id\":\"1012\",\"order_type\":\"8\",\"app_version\":\"V2.100\",\"day_time\":\"201702\"},{\"count\":\"2556.0\",\"order_count\":\"114\",\"channel_name\":\"当贝-盒子\",\"channel_id\":\"1013\",\"order_type\":\"1\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"480.0\",\"order_count\":\"13\",\"channel_name\":\"阿里Web-TV\",\"channel_id\":\"1099\",\"order_type\":\"0\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"377.0\",\"order_count\":\"13\",\"channel_name\":\"测试渠道2-盒子\",\"channel_id\":\"11111\",\"order_type\":\"3\",\"app_version\":\"V3.100\",\"day_time\":\"201702\"},{\"count\":\"3042.0\",\"order_count\":\"108\",\"channel_name\":\"通用-盒子\",\"channel_id\":\"1999\",\"order_type\":\"1\",\"app_version\":\"V.000\",\"day_time\":\"201702\"},{\"count\":\"767.9999999999992\",\"order_count\":\"133\",\"channel_name\":\"手机版(安卓)-Web\",\"channel_id\":\"2001\",\"order_type\":\"9\",\"app_version\":\"V1.203\",\"day_time\":\"201702\"}]";
+		JSONArray oldArr = JSONArray.fromObject(old);
+		JSONArray newArr = rebuildJSONArray(oldArr, "1999", "", "");
+		
+		System.out.println(newArr);
+	}
+}
