@@ -57,7 +57,7 @@ public class JSONConvertor {
 		sb.append("]");
 		return sb.toString();
 	}
-	
+	nihao a 
 //	public static JSONArray rebuildJSONArray11(JSONArray jsonArray){
 //		System.out.println("-----jsonArray-"+jsonArray);
 //		JSONArray newArray = new JSONArray();
